@@ -57,13 +57,42 @@
                 for (num = 0; num < scripts.data.length; num++) {
                     filename = scripts.name[num] = scripts.name[num].slice(scripts.name[num].lastIndexOf('/') + 1);
                     var src = scripts.data[num];
-                    source += ts.transpile(src);
+                    
+
+                    var options = {
+                        compilerOptions : {
+                            sourceMap : true
+                        },
+                        fileName : filename,
+                        reportDiagnostics : !!undefined,
+                        moduleName : undefined
+                    };
+
+                    var output = ts.transpileModule(src, options);
+
+                    var outputText = output.outputText;
+                    if(output.sourceMapText){
+                        //embed the source map:
+                        //first parse it:
+                        var sourceMap = JSON.parse(output.sourceMapText);
+                        
+                        //add the original sources:
+                        sourceMap.sourcesContent= [src];
+                        
+                        var sourceMapUri = 'data:,'+encodeURIComponent(JSON.stringify(sourceMap));
+                        
+                        outputText = outputText.replace(/\/\/# sourceMappingURL=.*$/,'//# sourceMappingURL='+sourceMapUri);
+                    }
+                    
+                    source += outputText;
                 }
             })();
         }
         elem = document.createElement('script');
         elem.type = 'text/javascript';
-        elem.innerHTML = '//Compiled TypeScript\n\n' + source;
+//        elem.innerHTML = '//Compiled TypeScript\n\n' + source;
+        var dataUri='data:,'+encodeURIComponent(source);
+        elem.src = dataUri;
         body.appendChild(elem);
     };
 
